@@ -199,104 +199,54 @@ function RingTarget({ rings, size = 300, interactive = true, onScore, arrows = [
   );
 }
 
-// ---------- Animal targets ----------
-// Shared quadruped builder: legs/ears/tail vary by animal
-function Quadruped({ animal, size, interactive, onScore, arrows, svgRef, tap }) {
-  const cfg = {
-    Deer: { body: "#8A5A3C", legH: 55, earType: "tall", tail: "short", mask: false },
-    Possum: { body: "#9B9A8C", legH: 30, earType: "round", tail: "long", mask: false },
-    Raccoon: { body: "#6E6455", legH: 30, earType: "round", tail: "ringed", mask: true },
-    Bear: { body: "#3B2A20", legH: 30, earType: "small", tail: "stub", mask: false },
-    Beaver: { body: "#6B4423", legH: 20, earType: "small", tail: "paddle", mask: false },
-  }[animal];
+function smoothClosedPath(points) {
+  const n = points.length;
+  let d = `M${points[0][0]},${points[0][1]} `;
+  for (let i = 0; i < n; i++) {
+    const p0 = points[(i - 1 + n) % n];
+    const p1 = points[i];
+    const p2 = points[(i + 1) % n];
+    const p3 = points[(i + 2) % n];
+    const cp1x = p1[0] + (p2[0] - p0[0]) / 6;
+    const cp1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const cp2x = p2[0] - (p3[0] - p1[0]) / 6;
+    const cp2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += `C${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2[0]},${p2[1]} `;
+  }
+  return d + "Z";
+}
 
-  const bodyCx = 160, bodyCy = 160, bodyRx = 85, bodyRy = 50;
-  const headCx = 75, headCy = 120, headR = 26;
-  const legY = bodyCy + bodyRy - 5;
-
-  const bodyClick = interactive ? (e) => tap(e, 5) : undefined;
-
+function Legs({ xs, top, height, width, color, onClick, interactive }) {
   return (
     <>
-      {/* miss zone */}
-      <rect
-        x={0}
-        y={0}
-        width={300}
-        height={300}
-        fill={COLORS.panel}
-        onClick={interactive ? (e) => tap(e, 0) : undefined}
-        style={interactive ? { cursor: "pointer" } : undefined}
-      />
-      {/* legs */}
-      {[bodyCx - 55, bodyCx - 20, bodyCx + 25, bodyCx + 55].map((x, i) => (
+      {xs.map((x, i) => (
         <rect
           key={i}
           x={x}
-          y={legY}
-          width={10}
-          height={cfg.legH}
-          rx={4}
-          fill={cfg.body}
-          onClick={bodyClick}
+          y={top}
+          width={width}
+          height={height}
+          rx={width / 2.5}
+          fill={color}
+          stroke={COLORS.ink}
+          strokeWidth={1}
+          onClick={onClick}
           style={interactive ? { cursor: "pointer" } : undefined}
         />
       ))}
-      {/* tail */}
-      {cfg.tail === "long" && (
-        <rect x={bodyCx + bodyRx - 5} y={bodyCy - 5} width={55} height={7} rx={3} fill={cfg.body} onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined} />
-      )}
-      {cfg.tail === "ringed" && (
-        <g onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined}>
-          <rect x={bodyCx + bodyRx - 5} y={bodyCy - 20} width={40} height={14} rx={6} fill={cfg.body} />
-          <rect x={bodyCx + bodyRx + 10} y={bodyCy - 20} width={8} height={14} fill={COLORS.ink} opacity={0.5} />
-          <rect x={bodyCx + bodyRx + 25} y={bodyCy - 20} width={8} height={14} fill={COLORS.ink} opacity={0.5} />
-        </g>
-      )}
-      {(cfg.tail === "short" || cfg.tail === "stub") && (
-        <ellipse cx={bodyCx + bodyRx} cy={bodyCy - 10} rx={cfg.tail === "stub" ? 12 : 8} ry={8} fill={cfg.body} onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined} />
-      )}
-      {cfg.tail === "paddle" && (
-        <g onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined}>
-          <ellipse cx={bodyCx + bodyRx + 20} cy={bodyCy + 5} rx={38} ry={16} fill={cfg.body} stroke={COLORS.ink} strokeWidth={2} />
-          <line x1={bodyCx + bodyRx} y1={bodyCy - 2} x2={bodyCx + bodyRx + 50} y2={bodyCy - 2} stroke={COLORS.ink} strokeWidth={1} opacity={0.3} />
-          <line x1={bodyCx + bodyRx + 5} y1={bodyCy + 8} x2={bodyCx + bodyRx + 55} y2={bodyCy + 8} stroke={COLORS.ink} strokeWidth={1} opacity={0.3} />
-        </g>
-      )}
-      {/* body */}
-      <ellipse cx={bodyCx} cy={bodyCy} rx={bodyRx} ry={bodyRy} fill={cfg.body} stroke={COLORS.ink} strokeWidth={2} onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined} />
-      {/* neck/head connector */}
-      <ellipse cx={105} cy={135} rx={30} ry={22} fill={cfg.body} onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined} />
-      {/* head */}
-      <circle cx={headCx} cy={headCy} r={headR} fill={cfg.body} stroke={COLORS.ink} strokeWidth={2} onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined} />
-      {/* mask (raccoon) */}
-      {cfg.mask && <rect x={headCx - 22} y={headCy - 6} width={44} height={10} rx={5} fill={COLORS.ink} opacity={0.55} />}
-      {/* ears */}
-      {cfg.earType === "tall" && (
-        <>
-          <polygon points={`${headCx - 18},${headCy - 20} ${headCx - 26},${headCy - 55} ${headCx - 6},${headCy - 28}`} fill={cfg.body} onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined} />
-          <polygon points={`${headCx + 4},${headCy - 26} ${headCx + 6},${headCy - 60} ${headCx + 22},${headCy - 22}`} fill={cfg.body} onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined} />
-        </>
-      )}
-      {cfg.earType === "round" && (
-        <>
-          <circle cx={headCx - 16} cy={headCy - 22} r={9} fill={cfg.body} onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined} />
-          <circle cx={headCx + 14} cy={headCy - 24} r={9} fill={cfg.body} onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined} />
-        </>
-      )}
-      {cfg.earType === "small" && (
-        <>
-          <circle cx={headCx - 14} cy={headCy - 22} r={7} fill={cfg.body} onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined} />
-          <circle cx={headCx + 12} cy={headCy - 23} r={7} fill={cfg.body} onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined} />
-        </>
-      )}
-      {/* vitals + kill zone (over front shoulder) */}
+    </>
+  );
+}
+
+function VitalsZone({ cx, cy, rx = 26, ry = 20, color, interactive, tap }) {
+  return (
+    <>
       <ellipse
-        cx={bodyCx - 20}
-        cy={bodyCy - 2}
-        rx={30}
-        ry={20}
-        fill={cfg.body}
+        cx={cx}
+        cy={cy}
+        rx={rx}
+        ry={ry}
+        fill={color}
         fillOpacity={0.35}
         stroke={COLORS.cream}
         strokeDasharray="5 4"
@@ -305,8 +255,8 @@ function Quadruped({ animal, size, interactive, onScore, arrows, svgRef, tap }) 
         style={interactive ? { cursor: "pointer" } : undefined}
       />
       <circle
-        cx={bodyCx - 20}
-        cy={bodyCy - 2}
+        cx={cx}
+        cy={cy}
         r={8}
         fill={COLORS.accent}
         onClick={interactive ? (e) => tap(e, 10) : undefined}
@@ -316,57 +266,208 @@ function Quadruped({ animal, size, interactive, onScore, arrows, svgRef, tap }) 
   );
 }
 
+// ---------- Animal targets ----------
+function DeerTarget({ interactive, tap }) {
+  const body = "#8A5A3C";
+  const bodyDark = "#6E4630";
+  const click = interactive ? (e) => tap(e, 5) : undefined;
+  const outline = smoothClosedPath([
+    [35, 145], [42, 128], [55, 112], [68, 102], [85, 98], [100, 95],
+    [120, 88], [155, 85], [190, 90], [215, 100], [230, 120], [225, 150],
+    [205, 180], [150, 188], [100, 182], [75, 170], [55, 158],
+  ]);
+  return (
+    <>
+      <rect x={0} y={0} width={300} height={300} fill={COLORS.panel} onClick={interactive ? (e) => tap(e, 0) : undefined} style={interactive ? { cursor: "pointer" } : undefined} />
+      <Legs xs={[95, 120, 178, 205]} top={178} height={77} width={9} color={bodyDark} onClick={click} interactive={interactive} />
+      {/* tail */}
+      <ellipse cx={228} cy={110} rx={9} ry={7} fill={body} stroke={COLORS.ink} strokeWidth={1.5} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      {/* antlers (decorative) */}
+      <g stroke={bodyDark} strokeWidth={3} fill="none" pointerEvents="none" strokeLinecap="round">
+        <path d="M62,88 L52,58 M52,58 L44,50 M52,58 L60,48" />
+        <path d="M78,86 L82,54 M82,54 L74,44 M82,54 L90,46" />
+      </g>
+      {/* body + head silhouette */}
+      <path d={outline} fill={body} stroke={COLORS.ink} strokeWidth={2} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      {/* ears */}
+      <polygon points="58,100 42,80 66,92" fill={body} stroke={COLORS.ink} strokeWidth={1.5} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      <polygon points="80,96 88,74 96,94" fill={body} stroke={COLORS.ink} strokeWidth={1.5} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      {/* eye + nose (decorative) */}
+      <circle cx={57} cy={124} r={3} fill={COLORS.ink} pointerEvents="none" />
+      <circle cx={36} cy={146} r={3.5} fill={COLORS.ink} pointerEvents="none" />
+      <VitalsZone cx={112} cy={148} rx={27} ry={20} color={bodyDark} interactive={interactive} tap={tap} />
+    </>
+  );
+}
+
+function BearTarget({ interactive, tap }) {
+  const body = "#3B2A20";
+  const bodyDark = "#2A1D16";
+  const click = interactive ? (e) => tap(e, 5) : undefined;
+  const outline = smoothClosedPath([
+    [45, 165], [50, 148], [65, 130], [85, 120], [100, 100], [135, 85],
+    [175, 90], [215, 105], [235, 135], [230, 170], [210, 200], [150, 208],
+    [100, 205], [70, 195], [50, 180],
+  ]);
+  return (
+    <>
+      <rect x={0} y={0} width={300} height={300} fill={COLORS.panel} onClick={interactive ? (e) => tap(e, 0) : undefined} style={interactive ? { cursor: "pointer" } : undefined} />
+      <Legs xs={[85, 118, 188, 218]} top={200} height={50} width={16} color={bodyDark} onClick={click} interactive={interactive} />
+      <ellipse cx={233} cy={148} rx={10} ry={8} fill={body} stroke={COLORS.ink} strokeWidth={1.5} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      <path d={outline} fill={body} stroke={COLORS.ink} strokeWidth={2} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      <circle cx={80} cy={112} r={11} fill={body} stroke={COLORS.ink} strokeWidth={1.5} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      <circle cx={104} cy={104} r={11} fill={body} stroke={COLORS.ink} strokeWidth={1.5} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      <circle cx={64} cy={140} r={3} fill={COLORS.ink} pointerEvents="none" />
+      <ellipse cx={44} cy={162} rx={6} ry={4} fill={COLORS.ink} opacity={0.6} pointerEvents="none" />
+      <VitalsZone cx={122} cy={158} rx={29} ry={22} color={bodyDark} interactive={interactive} tap={tap} />
+    </>
+  );
+}
+
+function RaccoonTarget({ interactive, tap }) {
+  const body = "#6E6455";
+  const bodyDark = "#544B40";
+  const click = interactive ? (e) => tap(e, 5) : undefined;
+  const outline = smoothClosedPath([
+    [40, 175], [48, 162], [62, 150], [78, 138], [92, 128], [110, 112],
+    [150, 105], [185, 115], [210, 130], [222, 155], [210, 180], [150, 190],
+    [100, 185], [72, 178], [50, 182],
+  ]);
+  return (
+    <>
+      <rect x={0} y={0} width={300} height={300} fill={COLORS.panel} onClick={interactive ? (e) => tap(e, 0) : undefined} style={interactive ? { cursor: "pointer" } : undefined} />
+      <Legs xs={[90, 118, 175, 202]} top={185} height={70} width={10} color={bodyDark} onClick={click} interactive={interactive} />
+      {/* ringed tail */}
+      <g onClick={click} style={interactive ? { cursor: "pointer" } : undefined}>
+        <rect x={214} y={128} width={45} height={16} rx={7} fill={body} stroke={COLORS.ink} strokeWidth={1.5} />
+        <rect x={228} y={128} width={9} height={16} fill={COLORS.ink} opacity={0.5} />
+        <rect x={245} y={128} width={9} height={16} fill={COLORS.ink} opacity={0.5} />
+      </g>
+      <path d={outline} fill={body} stroke={COLORS.ink} strokeWidth={2} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      <circle cx={70} cy={132} r={10} fill={body} stroke={COLORS.ink} strokeWidth={1.5} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      <circle cx={92} cy={124} r={10} fill={body} stroke={COLORS.ink} strokeWidth={1.5} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      {/* mask */}
+      <path d="M42,158 Q65,150 88,158 Q65,168 42,158 Z" fill={COLORS.ink} opacity={0.6} pointerEvents="none" />
+      <circle cx={44} cy={176} r={3} fill={COLORS.ink} pointerEvents="none" />
+      <VitalsZone cx={112} cy={155} rx={27} ry={20} color={bodyDark} interactive={interactive} tap={tap} />
+    </>
+  );
+}
+
+function PossumTarget({ interactive, tap }) {
+  const body = "#9B9A8C";
+  const bodyDark = "#7C7B6E";
+  const click = interactive ? (e) => tap(e, 5) : undefined;
+  const outline = smoothClosedPath([
+    [30, 175], [45, 168], [65, 160], [80, 150], [95, 145], [130, 138],
+    [165, 140], [195, 148], [215, 165], [205, 190], [150, 208], [100, 202],
+    [70, 195], [50, 180],
+  ]);
+  return (
+    <>
+      <rect x={0} y={0} width={300} height={300} fill={COLORS.panel} onClick={interactive ? (e) => tap(e, 0) : undefined} style={interactive ? { cursor: "pointer" } : undefined} />
+      <Legs xs={[95, 120, 175, 198]} top={200} height={50} width={9} color={bodyDark} onClick={click} interactive={interactive} />
+      {/* long thin tail */}
+      <rect x={210} y={168} width={62} height={6} rx={3} fill={bodyDark} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      <path d={outline} fill={body} stroke={COLORS.ink} strokeWidth={2} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      <circle cx={62} cy={149} r={8} fill={body} stroke={COLORS.ink} strokeWidth={1.5} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      <circle cx={82} cy={145} r={8} fill={body} stroke={COLORS.ink} strokeWidth={1.5} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      <circle cx={57} cy={163} r={3} fill={COLORS.ink} pointerEvents="none" />
+      <circle cx={32} cy={177} r={3} fill={COLORS.ink} pointerEvents="none" />
+      <VitalsZone cx={105} cy={162} rx={25} ry={19} color={bodyDark} interactive={interactive} tap={tap} />
+    </>
+  );
+}
+
+function BeaverTarget({ interactive, tap }) {
+  const body = "#6B4423";
+  const bodyDark = "#523419";
+  const click = interactive ? (e) => tap(e, 5) : undefined;
+  const outline = smoothClosedPath([
+    [45, 170], [55, 158], [68, 145], [85, 135], [100, 128], [120, 115],
+    [155, 108], [190, 115], [215, 130], [225, 155], [215, 185], [150, 195],
+    [100, 190], [75, 180], [52, 178],
+  ]);
+  return (
+    <>
+      <rect x={0} y={0} width={300} height={300} fill={COLORS.panel} onClick={interactive ? (e) => tap(e, 0) : undefined} style={interactive ? { cursor: "pointer" } : undefined} />
+      <Legs xs={[95, 120, 175, 200]} top={190} height={65} width={12} color={bodyDark} onClick={click} interactive={interactive} />
+      {/* paddle tail */}
+      <g onClick={click} style={interactive ? { cursor: "pointer" } : undefined}>
+        <ellipse cx={245} cy={150} rx={38} ry={16} fill={body} stroke={COLORS.ink} strokeWidth={2} />
+        <line x1={215} y1={144} x2={275} y2={144} stroke={COLORS.ink} strokeWidth={1} opacity={0.3} />
+        <line x1={220} y1={156} x2={278} y2={156} stroke={COLORS.ink} strokeWidth={1} opacity={0.3} />
+      </g>
+      <path d={outline} fill={body} stroke={COLORS.ink} strokeWidth={2} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      <circle cx={82} cy={122} r={7} fill={body} stroke={COLORS.ink} strokeWidth={1.5} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      <circle cx={99} cy={117} r={7} fill={body} stroke={COLORS.ink} strokeWidth={1.5} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      {/* front teeth */}
+      <rect x={47} y={170} width={10} height={9} fill="#F3ECD9" stroke={COLORS.ink} strokeWidth={1} pointerEvents="none" />
+      <circle cx={62} cy={143} r={3} fill={COLORS.ink} pointerEvents="none" />
+      <VitalsZone cx={118} cy={150} rx={27} ry={21} color={bodyDark} interactive={interactive} tap={tap} />
+    </>
+  );
+}
+
 function FishTarget({ interactive, tap }) {
-  const bodyClick = interactive ? (e) => tap(e, 5) : undefined;
+  const body = "#557E8C";
+  const bodyDark = "#3E5F6B";
+  const click = interactive ? (e) => tap(e, 5) : undefined;
+  const outline = smoothClosedPath([
+    [40, 150], [55, 128], [80, 112], [115, 100], [155, 97], [190, 103],
+    [220, 115], [245, 133], [255, 150], [245, 167], [220, 185], [190, 197],
+    [155, 203], [115, 200], [80, 188], [55, 172],
+  ]);
   return (
     <>
       <rect x={0} y={0} width={300} height={300} fill={COLORS.panel} onClick={interactive ? (e) => tap(e, 0) : undefined} style={interactive ? { cursor: "pointer" } : undefined} />
       {/* tail fin */}
-      <polygon points="250,150 300,110 300,190" fill="#4A6B7A" onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined} />
+      <polygon points="248,150 296,112 296,188" fill={bodyDark} stroke={COLORS.ink} strokeWidth={1.5} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
       {/* dorsal fin */}
-      <polygon points="140,95 180,60 210,95" fill="#4A6B7A" onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined} />
+      <polygon points="145,98 178,58 208,97" fill={bodyDark} stroke={COLORS.ink} strokeWidth={1.5} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      {/* pectoral fin */}
+      <polygon points="120,168 95,205 145,180" fill={bodyDark} opacity={0.85} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
       {/* body */}
-      <ellipse cx={150} cy={150} rx={100} ry={55} fill="#557E8C" stroke={COLORS.ink} strokeWidth={2} onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined} />
-      {/* eye (decorative) */}
-      <circle cx={65} cy={135} r={5} fill={COLORS.ink} opacity={0.6} />
-      {/* vitals */}
-      <ellipse cx={135} cy={155} rx={28} ry={20} fill="#3E5F6B" fillOpacity={0.5} stroke={COLORS.cream} strokeDasharray="5 4" strokeWidth={2}
-        onClick={interactive ? (e) => tap(e, 8) : undefined} style={interactive ? { cursor: "pointer" } : undefined} />
-      <circle cx={135} cy={155} r={8} fill={COLORS.accent}
-        onClick={interactive ? (e) => tap(e, 10) : undefined} style={interactive ? { cursor: "pointer" } : undefined} />
+      <path d={outline} fill={body} stroke={COLORS.ink} strokeWidth={2} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      {/* gill line + eye (decorative) */}
+      <path d="M78,120 Q70,150 78,180" stroke={COLORS.ink} strokeWidth={1.5} fill="none" opacity={0.4} pointerEvents="none" />
+      <circle cx={65} cy={135} r={5} fill={COLORS.ink} opacity={0.6} pointerEvents="none" />
+      <VitalsZone cx={135} cy={150} rx={28} ry={20} color={bodyDark} interactive={interactive} tap={tap} />
     </>
   );
 }
 
 function OwlTarget({ interactive, tap }) {
-  const bodyClick = interactive ? (e) => tap(e, 5) : undefined;
-  const owlColor = "#7A6248";
-  const owlColorDark = "#5E4B37";
+  const body = "#7A6248";
+  const bodyDark = "#5E4B37";
+  const click = interactive ? (e) => tap(e, 5) : undefined;
+  const outline = smoothClosedPath([
+    [95, 150], [92, 190], [100, 225], [118, 248], [150, 258], [182, 248],
+    [200, 225], [208, 190], [205, 150], [185, 128], [150, 118], [115, 128],
+  ]);
   return (
     <>
       <rect x={0} y={0} width={300} height={300} fill={COLORS.panel} onClick={interactive ? (e) => tap(e, 0) : undefined} style={interactive ? { cursor: "pointer" } : undefined} />
       {/* wings */}
-      <ellipse cx={92} cy={170} rx={24} ry={65} fill={owlColorDark} onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined} />
-      <ellipse cx={208} cy={170} rx={24} ry={65} fill={owlColorDark} onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined} />
+      <path d="M98,155 Q65,180 78,235 Q95,225 102,195 Z" fill={bodyDark} stroke={COLORS.ink} strokeWidth={1.5} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      <path d="M202,155 Q235,180 222,235 Q205,225 198,195 Z" fill={bodyDark} stroke={COLORS.ink} strokeWidth={1.5} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
       {/* body */}
-      <ellipse cx={150} cy={175} rx={62} ry={80} fill={owlColor} stroke={COLORS.ink} strokeWidth={2} onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined} />
+      <path d={outline} fill={body} stroke={COLORS.ink} strokeWidth={2} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
       {/* head */}
-      <circle cx={150} cy={95} r={48} fill={owlColor} stroke={COLORS.ink} strokeWidth={2} onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined} />
+      <circle cx={150} cy={95} r={48} fill={body} stroke={COLORS.ink} strokeWidth={2} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
       {/* ear tufts */}
-      <polygon points="118,60 108,25 132,52" fill={owlColor} onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined} />
-      <polygon points="182,60 192,25 168,52" fill={owlColor} onClick={bodyClick} style={interactive ? { cursor: "pointer" } : undefined} />
-      {/* eyes (decorative) */}
+      <polygon points="118,60 108,25 132,52" fill={body} stroke={COLORS.ink} strokeWidth={1.5} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      <polygon points="182,60 192,25 168,52" fill={body} stroke={COLORS.ink} strokeWidth={1.5} onClick={click} style={interactive ? { cursor: "pointer" } : undefined} />
+      {/* feather texture (decorative) */}
+      <path d="M120,175 Q150,185 180,175 M115,200 Q150,212 185,200" stroke={bodyDark} strokeWidth={2} fill="none" opacity={0.5} pointerEvents="none" />
+      {/* eyes */}
       <circle cx={130} cy={95} r={14} fill="#F3ECD9" pointerEvents="none" />
       <circle cx={170} cy={95} r={14} fill="#F3ECD9" pointerEvents="none" />
       <circle cx={130} cy={95} r={6} fill={COLORS.ink} pointerEvents="none" />
       <circle cx={170} cy={95} r={6} fill={COLORS.ink} pointerEvents="none" />
-      {/* beak (decorative) */}
+      {/* beak */}
       <polygon points="145,108 155,108 150,120" fill="#E8A33D" pointerEvents="none" />
-      {/* vitals */}
-      <ellipse cx={150} cy={175} rx={26} ry={30} fill={owlColorDark} fillOpacity={0.5} stroke={COLORS.cream} strokeDasharray="5 4" strokeWidth={2}
-        onClick={interactive ? (e) => tap(e, 8) : undefined} style={interactive ? { cursor: "pointer" } : undefined} />
-      <circle cx={150} cy={175} r={8} fill={COLORS.accent}
-        onClick={interactive ? (e) => tap(e, 10) : undefined} style={interactive ? { cursor: "pointer" } : undefined} />
+      <VitalsZone cx={150} cy={185} rx={26} ry={30} color={bodyDark} interactive={interactive} tap={tap} />
     </>
   );
 }
@@ -374,13 +475,19 @@ function OwlTarget({ interactive, tap }) {
 function AnimalTarget({ animal, size = 300, interactive = true, onScore, arrows = [] }) {
   const svgRef = useRef(null);
   const tap = useTapScore(svgRef, onScore || (() => {}));
+  const targets = {
+    Deer: DeerTarget,
+    Bear: BearTarget,
+    Raccoon: RaccoonTarget,
+    Possum: PossumTarget,
+    Beaver: BeaverTarget,
+    Fish: FishTarget,
+    Owl: OwlTarget,
+  };
+  const Species = targets[animal] || DeerTarget;
   return (
     <svg ref={svgRef} viewBox="0 0 300 300" width={size} height={size} style={{ touchAction: "manipulation" }}>
-      {animal === "Fish" && <FishTarget interactive={interactive} tap={tap} />}
-      {animal === "Owl" && <OwlTarget interactive={interactive} tap={tap} />}
-      {animal !== "Fish" && animal !== "Owl" && (
-        <Quadruped animal={animal} size={size} interactive={interactive} onScore={onScore} arrows={arrows} svgRef={svgRef} tap={tap} />
-      )}
+      <Species interactive={interactive} tap={tap} />
       {interactive && <ArrowMarkers arrows={arrows} />}
     </svg>
   );
